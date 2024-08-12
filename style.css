@@ -17,6 +17,7 @@ body {
     text-align: center;
     font-size: 8vh;
     z-index: -10;
+    text-wrap: nowrap;
 }
 
 .score {
@@ -135,7 +136,7 @@ a {
     }
     
     .title {
-        font-size: 7vh;
+        font-size: clamp(6vh, 7vh, 17vw);
     }
 }
 
