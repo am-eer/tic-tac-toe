@@ -155,11 +155,13 @@ const toggleRight = (event) => {
     }
 }
 
-const difficulty = (percent, difference) => {
+const difficulty = (percent) => {
+    let difference = isXturn?(parseInt(p2Score.textContent) - parseInt(p1Score.textContent)):(parseInt(p1Score.textContent) - parseInt(p2Score.textContent));
+    const grudge = 3;
     if(difference >= 0)
-        return (percent + (difference * (100 - percent) / 4));
+        return (percent + ((100 - percent) * difference / grudge));
     else
-        return (percent + (difference * percent / 4));
+        return (percent + (percent * difference / grudge));
 }
 
 const bot = () => {
@@ -168,157 +170,108 @@ const bot = () => {
         clearInterval(botInterval);
         return;
     }
-    else if(filledCount == 8) {
-        botRandom();
+    
+    let dice = Math.floor(Math.random() * 100);
+    if(dice < difficulty(50)) {
+        if(filledCount == 8) {
+            botRandom();
+            console.log("last move");
+            return;
+        }
+
+        if(filledCount == 0) {
+            botRandom();
+            console.log("first move");
+            return;
+        }
+
+        if(botBasic(secondLastMoveRow, secondLastMoveCol)) {
+            console.log("basic win");
+            return;
+        }
+        if(botBasic(lastMoveRow, lastMoveCol)) {
+            console.log("basic block");
+            return;
+        }
+        
+        if(filledCount == 7) {
+            botRandom();
+            console.log("2nd last move");
+            return;
+        }
+
+        const currentState = [[], [], []];
+        for(let i = 0; i < 3; i++)
+            for(let j = 0; j < 3; j++)
+                currentState[i].push(grid[i][j].textContent);
+        
+        let optimalRow, optimalCol, score, maxScore = -Infinity;
+        for(let i = 0; i < 3; i++)
+            for(let j = 0; j < 3; j++)
+                if(currentState[i][j] == '') {
+                    currentState[i][j] = isXturn?'X':'O';
+                    score = minimax(currentState, !isXturn, filledCount + 1, i, j);
+                    currentState[i][j] = '';
+                    if(score > maxScore) {
+                        maxScore = score;
+                        optimalRow = i;
+                        optimalCol = j;
+                    }
+                }
+        play(grid[optimalRow][optimalCol]);
+        console.log("minimax");
         return;
     }
 
-    let differ = isXturn?(parseInt(p2Score.textContent) - parseInt(p1Score.textContent)):(parseInt(p1Score.textContent) - parseInt(p2Score.textContent));
-    if(filledCount < 2) {
-        const emptyEdges = [...edges];
-        const emptyCorners = [...corners];
+    botRandom();
+}
 
-        if(!isXturn && emptyEdges.indexOf(grid[lastMoveRow][lastMoveCol]) != -1)
-            emptyEdges.splice(emptyEdges.indexOf(grid[lastMoveRow][lastMoveCol]), 1);
-        else if(!isXturn && emptyCorners.indexOf(grid[lastMoveRow][lastMoveCol]) != -1)
-            emptyCorners.splice(emptyCorners.indexOf(grid[lastMoveRow][lastMoveCol]), 1);
-        
-        let dice = Math.floor(Math.random() * 100);
-        if(dice < difficulty(20, differ)) {
-            if(grid[1][1].textContent == '') 
-                play(grid[1][1]);
-            else
-                play(emptyCorners[Math.floor(Math.random() * emptyCorners.length)]);
-            console.log("center start attempt");
-        }
-        else if(dice < difficulty(60, differ)) {
-            play(emptyCorners[Math.floor(Math.random() * emptyCorners.length)]);
-            console.log("corner start");
-        }
-        else if(dice < difficulty(90, differ)) {
-            play(emptyEdges[Math.floor(Math.random() * emptyEdges.length)]);
-            console.log("edge start");
-        }
-        else
-            botRandom();
-    }
-
-    else if(botBasic(secondLastMoveRow, secondLastMoveCol))
-        console.log("basic");
-    else if(botBasic(lastMoveRow, lastMoveCol))
-        console.log("basic");
-    
-    else if(filledCount == 7)
-        botRandom();
-
-    else {
-        const intermediateSlots = [], advancedSlots = [];
-        selector(intermediateSlots, advancedSlots);
-        
-        let dice = Math.floor(Math.random() * 100);
-        if(dice < difficulty(20, differ)) {
-            if(advancedSlots.length > 0) {
-                play(advancedSlots[Math.floor(Math.random() * advancedSlots.length)]);
-                console.log("advanced");
+const minimax = (previousState, tempIsXturn, tempFilledCount, row, col) => {
+    if(minimaxWin(previousState, row, col))
+        return tempIsXturn == isXturn?tempFilledCount-10:10-tempFilledCount;
+    if(tempFilledCount == 9)
+        return 0;
+    let score, extremeScore = tempIsXturn == isXturn?-Infinity:Infinity;
+    for(let i = 0; i < 3; i++)
+        for(let j = 0; j < 3; j++)
+            if(previousState[i][j] == '') {
+                previousState[i][j] = tempIsXturn?'X':'O';
+                score = minimax(previousState, !tempIsXturn, tempFilledCount + 1, i, j);
+                previousState[i][j] = '';
+                extremeScore = tempIsXturn == isXturn?Math.max(score, extremeScore):Math.min(score, extremeScore);
             }
-            else if(intermediateSlots.length > 0) {
-                play(intermediateSlots[Math.floor(Math.random() * intermediateSlots.length)]);
-                console.log("intermediate");
-            }
+
+    return extremeScore;
+}
+
+const minimaxWin = (state, row, col) => {
+    if(state[row][0] == state[row][1] && state[row][1] == state[row][2])
+        {
+            return true;
         }
-        else if(intermediateSlots.length > 0 && (dice < difficulty(60, differ))) {
-            play(intermediateSlots[Math.floor(Math.random() * intermediateSlots.length)]);
-            console.log("intermediate");
+    if(state[0][col] == state[1][col] && state[1][col] == state[2][col])
+        {
+            return true;
         }
-        else
-            botRandom();
-    }
+    if(col == row && state[0][0] == state[1][1] && state[1][1] == state[2][2])
+        {
+            return true;
+        }
+    if(col + row == 2 && state[0][2] == state[1][1] && state[1][1] == state[2][0])
+        {
+            return true;
+        }
+    return false;
 }
 
 const botRandom = () => {
     const randomEmpty = [];
-    for(i = 0; i < 3; i++)
-        for(j = 0; j < 3; j++)
+    for(let i = 0; i < 3; i++)
+        for(let j = 0; j < 3; j++)
             if(grid[i][j].textContent == '')
                 randomEmpty.push(grid[i][j]);
     play(randomEmpty[Math.floor(Math.random() * randomEmpty.length)]);
     console.log("random");
-}
-
-const selector = (intermediateSlots, advancedSlots) => {
-    if(filledCount < 2)
-        return;
-    
-    let i, j, botMarkCount = 0;
-    const emptySlots = [], combinedSlots = [];
-    
-    for(i = 0; i < 3; i++) {
-        for(j = 0; j < 3; j++) {
-            if(grid[i][j].textContent == (isXturn?'O':'X'))
-                break;
-            else if(grid[i][j].textContent == '')
-                emptySlots.push(grid[i][j]);
-            else if(grid[i][j].textContent == (isXturn?'X':'O'))
-                botMarkCount++;
-        }
-        if(botMarkCount == 1 && emptySlots.length == 2)
-            combinedSlots.push(...emptySlots);
-        botMarkCount = 0;
-        emptySlots.length = 0;
-    }
-    
-    for(i = 0; i < 3; i++) {
-        for(j = 0; j < 3; j++) {
-            if(grid[j][i].textContent == (isXturn?'O':'X'))
-                break;
-            else if(grid[j][i].textContent == '')
-                emptySlots.push(grid[j][i]);
-            else if(grid[j][i].textContent == (isXturn?'X':'O'))
-                botMarkCount++;
-        }
-        if(botMarkCount == 1 && emptySlots.length == 2)
-            combinedSlots.push(...emptySlots);
-        botMarkCount = 0;
-        emptySlots.length = 0;
-    }
-    
-    for(i = 0; i < 3; i++) {
-        if(grid[i][i].textContent == (isXturn?'O':'X'))
-            break;
-        else if(grid[i][i].textContent == '')
-            emptySlots.push(grid[i][i]);
-        else if(grid[i][i].textContent == (isXturn?'X':'O'))
-            botMarkCount++;
-    }
-    if(botMarkCount == 1 && emptySlots.length == 2)
-        combinedSlots.push(...emptySlots);
-    botMarkCount = 0;
-    emptySlots.length = 0;
-
-    for(i = 0; i < 3; i++) {
-        if(grid[i][2 - i].textContent == (isXturn?'O':'X'))
-            break;
-        else if(grid[i][2 - i].textContent == '')
-            emptySlots.push(grid[i][2 - i]);
-        else if(grid[i][2 - i].textContent == (isXturn?'X':'O'))
-            botMarkCount++;
-    }
-    if(botMarkCount == 1 && emptySlots.length == 2)
-        combinedSlots.push(...emptySlots);
-    botMarkCount = 0;
-    emptySlots.length = 0;
-
-    for(i = 0; i < combinedSlots.length; i++) {
-        if(combinedSlots.indexOf(combinedSlots[i]) == i)
-            intermediateSlots.push(combinedSlots[i])
-        else
-            advancedSlots.push(combinedSlots[i]);
-    }
-
-    if(advancedSlots.length > 0 && intermediateSlots.length > 0)    
-        for(i = 0; i < intermediateSlots.length; i++)
-            if(advancedSlots.indexOf(intermediateSlots[i]) != -1)
-                intermediateSlots.splice(i, 1);
 }
 
 const botBasic = (row, col) => {
