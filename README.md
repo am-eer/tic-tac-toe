@@ -7,7 +7,7 @@ A web app to play tic-tac-toe made using HTML, CSS and JavaScript.
 
 - Player vs Player, Player vs Bot and Bot vs Bot game modes
 
-- Bot implimentation based on the Minimax algorithm which recurses through the game tree to find the next best move
+- Bot implementation based on the Minimax algorithm which recurses through the game tree to find the next best move
 
 - Dynamic Bot difficulty based on score difference
 
